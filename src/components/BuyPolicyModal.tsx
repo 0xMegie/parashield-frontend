@@ -86,12 +86,18 @@ export function BuyPolicyModal({ product, onClose }: Props) {
       if (isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
         return 'Valid latitude and longitude are required';
       }
+      if (oracleKey.trim().length > 32) {
+        return 'Generated oracle key exceeds the 32-character limit';
+      }
     } else if (product.category === 'flight') {
       if (!flightNumber.trim()) {
         return 'Flight number is required';
       }
       if (!flightDate) {
         return 'Flight date is required';
+      }
+      if (oracleKey.trim().length > 32) {
+        return 'Generated oracle key exceeds the 32-character limit';
       }
     } else if (product.category === 'disaster' || product.category === 'health') {
       if (!oracleKey.trim() || oracleKey.trim().length > 32) {
@@ -261,7 +267,11 @@ export function BuyPolicyModal({ product, onClose }: Props) {
                   <input
                     type="text"
                     value={flightNumber}
-                    onChange={(e) => setFlightNumber(e.target.value)}
+                    // Strip colons at the source: a ':' is the oracle-key delimiter,
+                    // so one inside the flight number would break key parsing (#223).
+                    onChange={(e) => setFlightNumber(e.target.value.replace(/:/g, ''))}
+                    maxLength={16}
+                    pattern="[^:]*"
                     placeholder="e.g. KQ100"
                     className={INPUT_CLASS}
                   />

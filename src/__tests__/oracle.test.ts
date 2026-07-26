@@ -22,6 +22,23 @@ describe('parseOracleKey', () => {
     expect(result.period).toBe('2026-06-01');
   });
 
+  it('keeps the date when a flight number itself contains a colon (issue #223)', () => {
+    // "AB:12" as a flight number produces flight:AB:12:2026-06-01. A naive
+    // split on ':' would drop the date; parsing from the last ':' preserves it.
+    const key = buildFlightKey('AB:12', '2026-06-01');
+    const result = parseOracleKey(key);
+    expect(result.dataType).toBe('flight');
+    expect(result.flightNumber).toBe('AB:12');
+    expect(result.period).toBe('2026-06-01');
+  });
+
+  it('parses a flight key with no date segment', () => {
+    const result = parseOracleKey('flight:KQ100');
+    expect(result.dataType).toBe('flight');
+    expect(result.flightNumber).toBe('KQ100');
+    expect(result.period).toBeUndefined();
+  });
+
   it('handles unknown keys as unknown', () => {
     expect(parseOracleKey('unknown:key').dataType).toBe('unknown');
   });
@@ -46,6 +63,18 @@ describe('buildRainfallKey', () => {
   it('pads single-digit months', () => {
     const key = buildRainfallKey(0, 0, 2026, 3);
     expect(key).toContain('2026-03');
+  });
+
+  it('clamps coordinate precision so keys stay within the 32-char Soroban limit (issue #222)', () => {
+    // Raw high-precision coordinates would blow past 32 chars; clamping to 4
+    // decimals keeps the generated key comfortably within budget.
+    const key = buildRainfallKey(-0.091712345678, 34.767912345678, 2026, 12);
+    expect(key.length).toBeLessThanOrEqual(32);
+    expect(key).toBe('rainfall:-0.0917,34.7679:2026-12');
+  });
+
+  it('does not pad short coordinates with trailing zeros', () => {
+    expect(buildRainfallKey(0, 0, 2026, 6)).toBe('rainfall:0,0:2026-06');
   });
 });
 
